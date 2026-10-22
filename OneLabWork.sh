@@ -16,6 +16,22 @@ if [ ! -d "$TARGET_DIR" ]; then
     exit 1
 fi
 
+# Проверка Порога N (разрешены целые числа и десятичные дроби через точку, например: 10, 50.5, 0.25)
+if [[ ! "$THRESHOLD_N" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+    echo "Заданный порог: $THRESHOLD_N%"
+    echo "Кол-во архивированных файлов: $FILE_COUNT_M"
+    echo "Ошибка: Порог N должен быть числом >= 0 (например: 50 или 12.5). Буквы, знаки и пробелы запрещены."
+    exit 1
+fi
+
+# Проверка Количества файлов M (разрешены только целые числа >= 0)
+if [[ ! "$FILE_COUNT_M" =~ ^[0-9]+$ ]]; then
+    echo "Заданный порог: $THRESHOLD_N%"
+    echo "Кол-во архивированных файлов: $FILE_COUNT_M"
+    echo "Ошибка: Количество файлов M должно быть целым числом >= 0. Буквы, знаки и пробелы запрещены."
+    exit 1
+fi
+
 # Измерение размера папки (в КБ) и вычисление её доли от общего объема диска (в %)
 DIR_SIZE_KB=$(du -s "$TARGET_DIR" | awk '{print $1}')
 
@@ -28,6 +44,7 @@ PERCENTAGE=$(awk -v dir="$DIR_SIZE_KB" -v total="$TOTAL_DISK_KB" 'BEGIN {printf 
 echo "Папка: $TARGET_DIR"
 echo "Занимает места на диске: $PERCENTAGE%"
 echo "Заданный порог: $THRESHOLD_N%"
+echo "Кол-во архивированных файлов: $FILE_COUNT_M"
 
 # Проверка превышения порога N%
 IS_EXCEEDED=$(awk -v p="$PERCENTAGE" -v t="$THRESHOLD_N" 'BEGIN {print (p > t) ? 1 : 0}')
@@ -60,7 +77,7 @@ if [ "$IS_EXCEEDED" -eq 1 ]; then
     fi
 
     # Формирование имени архива с временной меткой
-    ARCHIVE_NAME="$ACTUAL_BACKUP/log_archive_$(date +%Y%m%d_%H%M%S).tar.gz"
+    ARCHIVE_NAME="$ACTUAL_BACKUP/log_archive_$(date +%Y%m%d_%H%M%S_%N).tar.gz"
 
     # Превращаем список строк в аргументы для tar (Архивация выбранных файлов)
     echo "$OLD_FILES" | tar -czf "$ARCHIVE_NAME" -T - 2>/dev/null
